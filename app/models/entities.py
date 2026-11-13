@@ -1,7 +1,7 @@
 """SQLAlchemy entities: persistence representation of the HelpDesk domain."""
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, String, Text
+from sqlalchemy import DateTime, ForeignKey, String, Text, Integer
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
@@ -27,6 +27,9 @@ class Ticket(Base):
     priority: Mapped[str] = mapped_column(String(30))
     status: Mapped[str] = mapped_column(String(30), default="Open")
     requester_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
+    
+    notas_internas: Mapped[list["NotaInterna"]] = relationship(back_populates="ticket", cascade="all, delete-orphan"
+                                                               )
     assignee_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     due_at: Mapped[datetime] = mapped_column(DateTime)
@@ -66,3 +69,15 @@ class Article(Base):
     category: Mapped[str] = mapped_column(String(50))
     author_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+class NotaInterna(Base):
+    __tablename__ = "notas_internas"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    ticket_id: Mapped[int] = mapped_column(ForeignKey("tickets.id"))
+    autor: Mapped[str] = mapped_column(String(100))
+    contenido: Mapped[str] = mapped_column(Text)
+    fecha_creacion: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+    # Relación inversa con el Ticket
+    ticket: Mapped["Ticket"] = relationship(back_populates="notas_internas")
