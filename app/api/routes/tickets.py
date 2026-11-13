@@ -65,3 +65,17 @@ def comment(ticket_id: int, body: CommentIn, user: Annotated[User, Depends(curre
 @router.get("/api/dashboard")
 def dashboard(user: Annotated[User, Depends(current_user)], db: Annotated[Session, Depends(get_db)]) -> dict:
     return TicketService(db).dashboard(user)
+
+@router.post("/api/tickets/{ticket_id}/private-log", status_code=201)
+def crear_nota_privada(
+    ticket_id: int,
+    body: CommentIn,  
+    user: Annotated[User, Depends(require_roles("technician", "supervisor", "administrator"))],
+    db: Annotated[Session, Depends(get_db)]
+) -> dict:
+    """Ficha 15: Bitácora interna cronológica - Solo técnico o administrador."""
+    return TicketService(db).agregar_nota_privada(
+        ticket_id=ticket_id,
+        autor=user.name,  
+        contenido=body.body  
+    )
