@@ -3,7 +3,7 @@ from datetime import datetime, timedelta
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
-from app.models import Comment, History, Ticket, User
+from app.models import Comment, History, Ticket, User, NotaInterna
 from app.models.enums import STATUSES
 from app.repositories.tickets import TicketRepository
 from app.repositories.users import UserRepository
@@ -117,3 +117,20 @@ class TicketService:
         tickets = self.tickets.list(requester_id=user.id if user.role == "requester" else None)
         group = lambda attr: {str(key): sum(1 for ticket in tickets if getattr(ticket, attr) == key) for key in set(getattr(ticket, attr) for ticket in tickets)}
         return {"open": sum(ticket.status not in ("Closed", "Cancelled") for ticket in tickets), "overdue": sum(ticket.due_at < datetime.utcnow() and ticket.status not in ("Closed", "Cancelled") for ticket in tickets), "status": group("status"), "priority": group("priority"), "category": group("category"), "workload": {str(key): sum(1 for ticket in tickets if ticket.assignee_id == key) for key in set(ticket.assignee_id for ticket in tickets if ticket.assignee_id)}}
+
+    def agregar_nota_privada(self, ticket_id: int, autor: str, contenido: str) -> NotaInterna:
+        """Agrega un diagnóstico a la bitácora interna cronológica del ticket (Ficha 15)."""
+        if not contenido or not contenido.strip():
+            raise HTTPException(400, "El contenido de la nota interna no puede estar vacío.")
+        
+        self._ticket(ticket_id)
+
+        nueva_nota = NotaInterna(
+            ticket_id=ticket_id,
+            autor=autor,
+            contenido=contenido
+        )
+        self.db.add(nueva_nota)
+        self.db.commit()
+        self.db.refresh(nueva_nota)
+        return nueva_nota
